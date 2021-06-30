@@ -8,8 +8,8 @@ let
       fetchSubmodules = true;
       owner = "status-im";
       repo ="nim-waku";
-      rev = "v${version}";
-      sha256 = "17nw8v4vpqwsjgadhb83zf3xbzyi01hsir78qv5y71d7chmgwjgs";
+      rev = "f140a71d6d5e93e73a737a756d2682ee70011cd9"; # = "v${version}"
+      sha256 = "092mfwbymyk98wgb180ksq7rbdf5n29mqr0vx7hyai23ss1ndy5a";
     };
     buildInputs = [ pkgs.pcre pkgs.nim ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
