@@ -4,15 +4,17 @@ let
   wakunode = pkgs.stdenv.mkDerivation rec {
     version = "0.4";
     name = "nim-waku-${version}";
-    src = pkgs.fetchgit {
-      deepClone = true;
-      url = "https://github.com/status-im/nim-waku";
-      rev = "5c58a19f4f50e207dcfbf34f4514cc7e88c709e5";
-      sha256 = "cK8Fp+TZ1zUcEgYkmB/72nqG98QU1hfLyIGDYJc8FcM=";
+    src = pkgs.fetchFromGitHub {
+      fetchSubmodules = true;
+      owner = "status-im";
+      repo ="nim-waku";
+      rev = "v${version}";
+      sha256 = "17nw8v4vpqwsjgadhb83zf3xbzyi01hsir78qv5y71d7chmgwjgs";
     };
-    buildInputs = [ pkgs.pcre ];
+    buildInputs = [ pkgs.pcre pkgs.nim ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+    USE_SYSTEM_NIM = 1;
 
     buildPhase = ''
       export HOME=$TMPDIR
