@@ -11,9 +11,9 @@ let
       rev = "f140a71d6d5e93e73a737a756d2682ee70011cd9"; # = "v${version}"
       sha256 = "092mfwbymyk98wgb180ksq7rbdf5n29mqr0vx7hyai23ss1ndy5a";
     };
-    buildInputs = [ pkgs.pcre pkgs.nim ];
+    nativeBuildInputs = [ pkgs.pcre pkgs.nim pkgs.libbacktrace ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
-    LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+    LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath nativeBuildInputs}";
     USE_SYSTEM_NIM = 1;
 
     buildPhase = ''
@@ -92,7 +92,7 @@ let
       ln -s ${pkgs.libnatpmp}/lib/libnatpmp.a vendor/nim-nat-traversal/vendor/libnatpmp-upstream/libnatpmp.a
       ln -s ${pkgs.miniupnpc}/lib/libminiupnpc.a vendor/nim-nat-traversal/vendor/miniupnp/miniupnpc/libminiupnpc.a
 
-      ${pkgs.nim}/bin/nim c --out:build/wakunode2 -d:chronicles_log_level=DEBUG --verbosity:0 --hints:off -d:release waku/v2/node/wakunode2.nim
+      ${pkgs.nim}/bin/nim c --out:build/wakunode2 --debugger:native -d:chronicles_log_level=DEBUG --verbosity:0 --hints:off -d:release waku/v2/node/wakunode2.nim
     '';
     installPhase = ''
       mkdir -p $out/bin
