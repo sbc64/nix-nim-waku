@@ -3,7 +3,7 @@ let
   # rlnDerivation  = ./import/librln.nix
   wakunode = pkgs.stdenv.mkDerivation rec {
     version = "master";
-    name = "nim-waku-${version}";
+    pname = "nim-waku";
     src = pkgs.fetchFromGitHub {
       fetchSubmodules = true;
       owner = "status-im";
