@@ -2,16 +2,16 @@
 let
   # rlnDerivation  = ./import/librln.nix
   wakunode = pkgs.stdenv.mkDerivation rec {
-    version = "0.6";
+    version = "0.7";
     pname = "nim-waku";
     src = pkgs.fetchFromGitHub {
       fetchSubmodules = true;
       owner = "status-im";
       repo ="nim-waku";
       rev = "v${version}";
-      sha256 = "1bzg1591l42jzrfyb94n2f4qi3qk4x04ss01il4nc23v3k21gk8l"; # pkgs.lib.fakeSha256;
+      sha256 = "nbDlPBDtASwstAKVicfFSVFmo18RguMHNApKRjdT1dU="; # pkgs.lib.fakeSha256;
     };
-    nativeBuildInputs = [ pkgs.pcre pkgs.nim pkgs.libnatpmp pkgs.miniupnpc ];
+    nativeBuildInputs = with pkgs; [ pcre nim libnatpmp miniupnpc ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath nativeBuildInputs}";
     buildPhase = ''
