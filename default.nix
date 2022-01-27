@@ -1,5 +1,29 @@
-{ pkgs ? import (import ./nix/sources.nix).nixpkgs {} }:
+{ sources ? import ./nix/sources.nix, enableRln ? true }:
 let
+  nimOverlay = final: prev: {
+    nim-unwrapped = prev.nim-unwrapped.overrideAttrs (old: rec {
+      pname = "nim-unwrapped";
+      version = "1.2.16";
+      strictDeps = true;
+      patches = [ ./nixbuild.patch ./NIM_CONFIG_DIR.patch ];
+      src = prev.fetchurl {
+        url = "https://nim-lang.org/download/nim-${version}.tar.xz";
+        sha256 = "Ycw6UoCUDkCFhD/v3hoeNwz8MUUUxPW6gSrNLUqaz2s=";
+      };
+    });
+    installPhase = ''
+      runHook preInstall
+      install -Dt $out/bin bin/*
+      ln -sf $out/nim/bin/nim $out/bin/nim
+      ./install.sh $out
+      runHook postInstall
+    '';
+  };
+
+  pkgs = import sources.nixpkgs {
+      overlays = [ nimOverlay ];
+  };
+
   nimlibbacktrace = pkgs.stdenv.mkDerivation rec {
     version = "0.0.8";
     pname = "nim-libbacktrace";
@@ -31,19 +55,29 @@ let
     cargoSha256 = "iA9DkHZvvV1O4BsZ2HOL8ocRjEqRrrzfzbQTmrJ4msI=";
   };
   wakunode = pkgs.stdenv.mkDerivation rec {
-    version = "0.7";
+    # make sure that the commit actually compiles
+    #version = "0.7"; # release 0.7 doesn't work
+    version = "master";
     pname = "nim-waku";
     src = pkgs.fetchFromGitHub {
       fetchSubmodules = true;
       owner = "status-im";
       repo ="nim-waku";
-      rev = "v${version}";
-      sha256 = "nbDlPBDtASwstAKVicfFSVFmo18RguMHNApKRjdT1dU="; # pkgs.lib.fakeSha256;
+      rev = "4421b8de0074574c3740b71a197b4f6eeb90c1c5"; #"v${version}";
+      sha256 = "SuKjtUwe+ZFNH3anh7HY9VdJ1IQhs1uvdzHbDLZ00pA="; #pkgs.lib.fakeSha256;
     };
-    nativeBuildInputs = with pkgs; [ nim libnatpmp miniupnpc ];
+    nativeBuildInputs = with pkgs; [ nim-unwrapped libnatpmp miniupnpc ];
     buildInputs = with pkgs; [ pcre ];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath nativeBuildInputs}";
+    compileArgs = [
+      "--out:build/wakunode"
+      "--debugger:native"
+      "--d:chronicles_log_level=INFO"
+      "--verbosity:0"
+      "--hints:off"
+      "-d:release"
+    ] ++ pkgs.lib.optional enableRln "-d:rln";
     buildPhase = ''
       export HOME=$TMPDIR
       export NIMBLE_DIR=`readlink -f vendor/.nimble`
@@ -72,12 +106,13 @@ let
       ln -s ${pkgs.miniupnpc}/lib/libminiupnpc.a vendor/nim-nat-traversal/vendor/miniupnp/miniupnpc/libminiupnpc.a
       mkdir -p vendor/nim-libbacktrace/install/usr
       ln -s ${nimlibbacktrace}/lib vendor/nim-libbacktrace/install/usr
-
-      ${pkgs.nim}/bin/nim c --out:build/wakunode2 --debugger:native -d:chronicles_log_level=DEBUG --verbosity:0 --hints:off -d:release waku/v2/node/wakunode2.nim
+      ${pkgs.lib.optionalString enableRln ''
+        mkdir -p vendor/rln/target/debug
+        ln -s ${rln}/lib/librln.so vendor/rln/target/debug/librln.so
+      ''}
+      ${pkgs.nim-unwrapped}/bin/nim --version
+      ${pkgs.nim-unwrapped}/bin/nim compile ${pkgs.lib.concatStringsSep " " compileArgs} waku/v2/node/wakunode2.nim
     '';
-    installPhase = ''
-      mkdir -p $out/bin
-      cp build/wakunode2 $out/bin/wakunode
-    '';
+    installPhase = "install -Dt $out/bin build/wakunode";
   };
 in wakunode
