@@ -1,4 +1,4 @@
-{ sources ? import ./nix/sources.nix, enableRln ? true }:
+{ sources ? import ./nix/sources.nix, enableRln ? false }:
 let
   nimOverlay = final: prev: {
     nim-unwrapped = prev.nim-unwrapped.overrideAttrs (old: rec {
@@ -55,7 +55,7 @@ let
     cargoSha256 = "iA9DkHZvvV1O4BsZ2HOL8ocRjEqRrrzfzbQTmrJ4msI=";
   };
   wakunode = pkgs.stdenv.mkDerivation rec {
-    # make sure that the commit actually compiles
+    # make sure that the commit actually compiles before packaging with nix
     #version = "0.7"; # release 0.7 doesn't work
     version = "master";
     pname = "nim-waku";
@@ -78,27 +78,9 @@ let
       "--hints:off"
       "-d:release"
     ] ++ pkgs.lib.optional enableRln "-d:rln";
+
     buildPhase = ''
       export HOME=$TMPDIR
-      export NIMBLE_DIR=`readlink -f vendor/.nimble`
-      submodules=$(cat .gitmodules | grep submodule | cut -f2 -d" " | tr -d ']"')
-
-      # This for loop creates a file in
-      # vendor/.nimble/pkgs/<pkg name>-#head/<pkg name>nimble.link
-      # This allows nim to find the sources of its dependencies through nimble
-      #
-      # This for loop is based on https://github.com/status-im/nimbus-build-system/blob/master/scripts/create_nimble_link.sh
-      # TLDR linking the src of the vendored packages to a format nimble can read
-      for mod in $submodules; do
-        pkgName=$(echo -n $mod | awk 'BEGIN { FS = "/" }; {print $NF}')
-        pkgSrcDir="$(readlink -f $mod)"
-        if [ -d "$pkgSrcDir/src" ]; then
-          pkgSrcDir="$pkgSrcDir/src"
-        fi
-        mkdir -vp "$NIMBLE_DIR/pkgs/$pkgName-#head"
-        echo -e "$pkgSrcDir\n$pkgSrcDir" > "$NIMBLE_DIR/pkgs/$pkgName-#head/$pkgName.nimble-link"
-      done
-
       # To avoid building these libraries we just link them with what
       # already exists in nixpkgs but we use the paths that nim compiler expects
       # them to be
@@ -107,12 +89,51 @@ let
       mkdir -p vendor/nim-libbacktrace/install/usr
       ln -s ${nimlibbacktrace}/lib vendor/nim-libbacktrace/install/usr
       ${pkgs.lib.optionalString enableRln ''
-        mkdir -p vendor/rln/target/debug
-        ln -s ${rln}/lib/librln.so vendor/rln/target/debug/librln.so
+        # We don't need to add rln to the search path because lib rln
+        #mkdir -p vendor/rln/target/debug
+        #ln -s ${rln}/lib/librln.so vendor/rln/target/debug/librln.so
       ''}
       ${pkgs.nim-unwrapped}/bin/nim --version
-      ${pkgs.nim-unwrapped}/bin/nim compile ${pkgs.lib.concatStringsSep " " compileArgs} waku/v2/node/wakunode2.nim
+      # We define the source search path using -p
+      # This helps use from having to use $NIMBLE_DIR
+      ${pkgs.nim-unwrapped}/bin/nim \
+        -p:$(pwd)/vendor/nim-eth \
+        -p:$(pwd)/vendor/nim-secp256k1 \
+        -p:$(pwd)/vendor/nim-libp2p \
+        -p:$(pwd)/vendor/nim-stew \
+        -p:$(pwd)/vendor/nimbus-build-system \
+        -p:$(pwd)/vendor/nim-nat-traversal \
+        -p:$(pwd)/vendor/nim-libbacktrace \
+        -p:$(pwd)/vendor/nim-confutils \
+        -p:$(pwd)/vendor/nim-chronicles \
+        -p:$(pwd)/vendor/nim-faststreams \
+        -p:$(pwd)/vendor/nim-chronos \
+        -p:$(pwd)/vendor/nim-json-serialization \
+        -p:$(pwd)/vendor/nim-serialization \
+        -p:$(pwd)/vendor/nimcrypto \
+        -p:$(pwd)/vendor/nim-metrics \
+        -p:$(pwd)/vendor/nim-stint \
+        -p:$(pwd)/vendor/nim-json-rpc \
+        -p:$(pwd)/vendor/nim-http-utils \
+        -p:$(pwd)/vendor/news \
+        -p:$(pwd)/vendor/nim-bearssl \
+        -p:$(pwd)/vendor/nim-sqlite3-abi \
+        -p:$(pwd)/vendor/nim-web3 \
+        -p:$(pwd)/vendor/nim-testutils \
+        -p:$(pwd)/vendor/nim-unittest2 \
+        -p:$(pwd)/vendor/nim-websock \
+        -p:$(pwd)/vendor/nim-zlib \
+        -p:$(pwd)/vendor/nim-dnsdisc \
+        -p:$(pwd)/vendor/dnsclient.nim/src \
+        compile ${pkgs.lib.concatStringsSep " " compileArgs} waku/v2/node/wakunode2.nim
     '';
-    installPhase = "install -Dt $out/bin build/wakunode";
+    installPhase = "
+      install -Dt $out/bin build/wakunode
+      ${pkgs.lib.optionalString enableRln ''
+        # lib rln is loaded on runtime:
+        # https://github.com/status-im/nim-waku/blob/dbbc0f750bef23278cfeb1111187e057519efef4/waku/v2/protocol/waku_rln_relay/rln.nim#L9
+        install -Dt $out/lib ${rln}/lib/librln.so
+      ''}
+    ";
   };
 in wakunode
