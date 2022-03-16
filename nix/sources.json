@@ -21,6 +21,6 @@
         "sha256": "1ckwbz7x1zacw6jzb8a95k1yn2ayzjiwwrs7z8blh4l3k2mkqh87",
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/4c3f44ad68325d118c082553a5e40dd79a47fa27.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+        "url_template": "https://github.com/<owner>/<repo>/archive/ref/tags/<rev>.tar.gz"
     }
 }
