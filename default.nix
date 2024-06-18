@@ -1,11 +1,13 @@
-{ sources ? import ./nix/sources.nix, enableRln ? false }:
-let
+{
+  sources ? import ./nix/sources.nix,
+  enableRln ? false,
+}: let
   nimOverlay = final: prev: {
     nim-unwrapped = prev.nim-unwrapped.overrideAttrs (old: rec {
       pname = "nim-unwrapped";
       version = "1.2.16";
       strictDeps = true;
-      patches = [ ./nixbuild.patch ./NIM_CONFIG_DIR.patch ];
+      patches = [./nixbuild.patch ./NIM_CONFIG_DIR.patch];
       src = prev.fetchurl {
         url = "https://nim-lang.org/download/nim-${version}.tar.xz";
         sha256 = "Ycw6UoCUDkCFhD/v3hoeNwz8MUUUxPW6gSrNLUqaz2s=";
@@ -21,7 +23,7 @@ let
   };
 
   pkgs = import sources.nixpkgs {
-      overlays = [ nimOverlay ];
+    overlays = [nimOverlay];
   };
 
   nimlibbacktrace = pkgs.stdenv.mkDerivation rec {
@@ -42,7 +44,7 @@ let
       cp -r install/usr/lib $out/lib
     '';
   };
-  rln  = pkgs.rustPlatform.buildRustPackage rec {
+  rln = pkgs.rustPlatform.buildRustPackage rec {
     pname = "rln";
     version = "0.1.0";
     src = pkgs.fetchFromGitHub {
@@ -51,7 +53,7 @@ let
       rev = "master";
       sha256 = "q68uaBlsXPjHP65KqPen57yxsEoQNGWf8FmRlVTqWPU=";
     };
-    cargoPatches = [ ./cargo-lock.patch ];
+    cargoPatches = [./cargo-lock.patch];
     cargoSha256 = "iA9DkHZvvV1O4BsZ2HOL8ocRjEqRrrzfzbQTmrJ4msI=";
   };
   wakunode = pkgs.stdenv.mkDerivation rec {
@@ -62,22 +64,24 @@ let
     src = pkgs.fetchFromGitHub {
       fetchSubmodules = true;
       owner = "status-im";
-      repo ="nim-waku";
+      repo = "nim-waku";
       rev = "4421b8de0074574c3740b71a197b4f6eeb90c1c5"; #"v${version}";
       sha256 = "SuKjtUwe+ZFNH3anh7HY9VdJ1IQhs1uvdzHbDLZ00pA="; #pkgs.lib.fakeSha256;
     };
-    nativeBuildInputs = with pkgs; [ nim-unwrapped libnatpmp miniupnpc ];
-    buildInputs = with pkgs; [ pcre ];
+    nativeBuildInputs = with pkgs; [nim-unwrapped libnatpmp miniupnpc];
+    buildInputs = with pkgs; [pcre];
     LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath nativeBuildInputs}";
-    compileArgs = [
-      "--out:build/wakunode"
-      "--debugger:native"
-      "--d:chronicles_log_level=INFO"
-      "--verbosity:0"
-      "--hints:off"
-      "-d:release"
-    ] ++ pkgs.lib.optional enableRln "-d:rln";
+    compileArgs =
+      [
+        "--out:build/wakunode"
+        "--debugger:native"
+        "--d:chronicles_log_level=INFO"
+        "--verbosity:0"
+        "--hints:off"
+        "-d:release"
+      ]
+      ++ pkgs.lib.optional enableRln "-d:rln";
 
     buildPhase = ''
       export HOME=$TMPDIR
@@ -130,10 +134,11 @@ let
     installPhase = "
       install -Dt $out/bin build/wakunode
       ${pkgs.lib.optionalString enableRln ''
-        # lib rln is loaded on runtime:
-        # https://github.com/status-im/nim-waku/blob/dbbc0f750bef23278cfeb1111187e057519efef4/waku/v2/protocol/waku_rln_relay/rln.nim#L9
-        install -Dt $out/lib ${rln}/lib/librln.so
-      ''}
+      # lib rln is loaded on runtime:
+      # https://github.com/status-im/nim-waku/blob/dbbc0f750bef23278cfeb1111187e057519efef4/waku/v2/protocol/waku_rln_relay/rln.nim#L9
+      install -Dt $out/lib ${rln}/lib/librln.so
+    ''}
     ";
   };
-in wakunode
+in
+  wakunode
