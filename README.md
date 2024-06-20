@@ -19,10 +19,7 @@ Since it is already packaged with nix, it can be compiled into a `docker` like t
   nixNimRepoSha256,
 }:
 let
-  wakunode = (import(fetchTarball {
-    url = "https://github.com/sbc64/nix-nim-waku/archive/${wakuVersionTag}.tar.gz";
-    sha256 = nixNimRepoSha256;
-  }) {});
+  wakunode = import ./default.nix;
   entry-script = with pkgs; writeScript "entry-script.sh" ''
     #!${runtimeShell}
     set -e
