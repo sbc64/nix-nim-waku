@@ -1,5 +1,5 @@
-{sources ? import ./sources.nix}: let
-  pkgs = import sources.nixpkgs;
+{sources ? import ./nix/sources.nix}: let
+  pkgs = import sources.nixpkgs {};
   wakunode = import ./default.nix {};
   entry-script = with pkgs;
     writeScript "entry-script.sh" ''

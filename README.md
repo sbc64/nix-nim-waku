@@ -14,7 +14,7 @@ Since it is already packaged with nix, it can be compiled into a `docker` image 
 
 ```bash
 nix-build docker.nix
-/nix/store/ga49asz86bi63k0d3ga6bw2jg7i2yhyy-wakunode.tar.gz
+/nix/store/7y2rv19imcksfbxzl5xm7gj71b4pcdh9-wakunode.tar.gz
 ```
 
 And load it into docker with
